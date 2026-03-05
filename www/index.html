@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>计时器</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 28px;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      letter-spacing: 0.15em;
+      color: #a0c4ff;
+      text-transform: uppercase;
+    }
+
+    .card {
+      background: #16213e;
+      border: 1px solid #2a2a5a;
+      border-radius: 16px;
+      padding: 32px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .time-field {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .time-field label {
+      font-size: 0.72rem;
+      color: #8888aa;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .time-field input {
+      width: 72px;
+      text-align: center;
+      font-size: 1.5rem;
+      padding: 8px 4px;
+      border: 1px solid #3a3a6a;
+      border-radius: 8px;
+      background: #0f3460;
+      color: #eee;
+      outline: none;
+    }
+
+    .colon {
+      font-size: 1.8rem;
+      color: #8888aa;
+      padding-bottom: 18px;
+    }
+
+    .ring-wrap {
+      position: relative;
+      width: 210px;
+      height: 210px;
+    }
+
+    .ring-wrap svg { transform: rotate(-90deg); }
+    .ring-bg { stroke: #2a2a5a; }
+    .ring-fg {
+      stroke: #4cc9f0;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.85s linear, stroke 0.4s;
+    }
+    .ring-fg.overtime { stroke: #ff6b35; }
+
+    .ring-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .display {
+      font-size: 4rem;
+      font-variant-numeric: tabular-nums;
+      font-weight: 300;
+      letter-spacing: 0.06em;
+      color: #e0f0ff;
+      transition: color 0.3s;
+    }
+
+    .display.warn   { color: #ffbe0b; }
+    .display.urgent { color: #ff4444; }
+    .display.overtime { color: #ff6b35; }
+
+    .status-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      color: #8888aa;
+      text-transform: uppercase;
+    }
+    .status-label.overtime-label { color: #ff6b35; }
+
+    .overtime-display {
+      font-size: 0.85rem;
+      color: #ff6b35;
+      font-variant-numeric: tabular-nums;
+      min-height: 1.2em;
+    }
+
+    .btn-row { display: flex; gap: 16px; }
+
+    button {
+      padding: 12px 32px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      transition: opacity 0.2s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:active { transform: scale(0.96); }
+    #btnStart { background: #4cc9f0; color: #0d0d1a; }
+    #btnReset { background: #3a3a6a; color: #ccc; }
+
+    .log {
+      width: 100%;
+      max-height: 72px;
+      overflow-y: auto;
+      font-size: 0.77rem;
+      color: #556;
+      border-top: 1px solid #2a2a5a;
+      padding-top: 10px;
+      line-height: 1.7;
+    }
+
+    .log span { display: block; }
+    .log span.alert { color: #ffaa55; }
+  </style>
+</head>
+<body>
+
+<h1>计时器</h1>
+
+<div class="card">
+  <div class="input-row">
+    <div class="time-field">
+      <label>分钟</label>
+      <input id="inputMin" type="number" min="0" max="99" value="0" inputmode="numeric" />
+    </div>
+    <div class="colon">:</div>
+    <div class="time-field">
+      <label>秒钟</label>
+      <input id="inputSec" type="number" min="0" max="59" value="10" inputmode="numeric" />
+    </div>
+  </div>
+
+  <div class="ring-wrap">
+    <svg width="210" height="210" viewBox="0 0 210 210">
+      <circle class="ring-bg" cx="105" cy="105" r="92" fill="none" stroke-width="10"/>
+      <circle class="ring-fg" id="ringFg" cx="105" cy="105" r="92" fill="none" stroke-width="10"
+              stroke-dasharray="578.05" stroke-dashoffset="0"/>
+    </svg>
+    <div class="ring-label">
+      <div class="status-label" id="statusLabel">准备</div>
+      <div class="display" id="display">00:10</div>
+      <div class="overtime-display" id="overtimeDisplay"></div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button id="btnStart">开始</button>
+    <button id="btnReset">重置</button>
+  </div>
+
+  <div class="log" id="log"></div>
+</div>
+
+<!-- Capacitor core -->
+<script src="capacitor.js"></script>
+<script>
+  const CIRC = 2 * Math.PI * 92;
+
+  const display         = document.getElementById('display');
+  const statusLabel     = document.getElementById('statusLabel');
+  const overtimeDisplay = document.getElementById('overtimeDisplay');
+  const ringFg          = document.getElementById('ringFg');
+  const btnStart        = document.getElementById('btnStart');
+  const btnReset        = document.getElementById('btnReset');
+  const logEl           = document.getElementById('log');
+  const inputMin        = document.getElementById('inputMin');
+  const inputSec        = document.getElementById('inputSec');
+
+  let totalSeconds = 0;
+  let elapsed      = 0;
+  let alarmFired   = false;
+  let running      = false;
+  let intervalId   = null;
+
+  const alarmAudio = new Audio('alarm.wav');
+
+  /* ---- Capacitor 本地通知 ---- */
+  let LocalNotifications = null;
+
+  async function initNotifications() {
+    try {
+      const { LocalNotifications: LN } = Capacitor.Plugins;
+      LocalNotifications = LN;
+      const perm = await LN.requestPermissions();
+      console.log('通知权限:', perm.display);
+    } catch (e) {
+      console.log('非 Capacitor 环境，跳过通知初始化');
+    }
+  }
+
+  async function scheduleNativeAlarm(delaySeconds) {
+    if (!LocalNotifications) return;
+    try {
+      await LocalNotifications.cancel({ notifications: [{ id: 1 }] });
+      await LocalNotifications.schedule({
+        notifications: [{
+          id: 1,
+          title: '时间到！',
+          body: '点击打开计时器查看超时情况',
+          sound: 'alarm.wav',
+          schedule: { at: new Date(Date.now() + delaySeconds * 1000) },
+          extra: null
+        }]
+      });
+    } catch (e) {
+      console.log('通知调度失败:', e);
+    }
+  }
+
+  async function cancelNativeAlarm() {
+    if (!LocalNotifications) return;
+    try {
+      await LocalNotifications.cancel({ notifications: [{ id: 1 }] });
+    } catch (e) {}
+  }
+
+  /* ---- 格式化 ---- */
+  function fmt(s) {
+    const m   = String(Math.floor(s / 60)).padStart(2, '0');
+    const sec = String(s % 60).padStart(2, '0');
+    return `${m}:${sec}`;
+  }
+
+  function addLog(msg, isAlert = false) {
+    const span = document.createElement('span');
+    span.textContent = msg;
+    if (isAlert) span.className = 'alert';
+    logEl.prepend(span);
+    while (logEl.children.length > 30) logEl.removeChild(logEl.lastChild);
+  }
+
+  function updateDisplay() {
+    if (!alarmFired) {
+      const remaining = totalSeconds - elapsed;
+      display.textContent = fmt(remaining);
+      const ratio = totalSeconds > 0 ? remaining / totalSeconds : 1;
+      display.className = 'display' +
+        (ratio <= 0.1 ? ' urgent' : ratio <= 0.25 ? ' warn' : '');
+      ringFg.classList.remove('overtime');
+      ringFg.style.stroke = ratio <= 0.1 ? '#ff4444' : ratio <= 0.25 ? '#ffbe0b' : '#4cc9f0';
+      ringFg.style.strokeDashoffset = CIRC * (1 - ratio);
+      statusLabel.textContent = '倒计时';
+      statusLabel.className   = 'status-label';
+      overtimeDisplay.textContent = '';
+    } else {
+      const overtime = elapsed - totalSeconds;
+      display.textContent = fmt(elapsed);
+      display.className   = 'display overtime';
+      ringFg.classList.add('overtime');
+      ringFg.style.stroke = '#ff6b35';
+      ringFg.style.strokeDashoffset = CIRC * (1 - (overtime % 60) / 60);
+      statusLabel.textContent = '已超时';
+      statusLabel.className   = 'status-label overtime-label';
+      overtimeDisplay.textContent = `+ ${fmt(overtime)}`;
+    }
+  }
+
+  function tick() {
+    elapsed++;
+    if (!alarmFired && elapsed >= totalSeconds) {
+      alarmFired = true;
+      alarmAudio.currentTime = 0;
+      alarmAudio.play();
+      setTimeout(() => { alarmAudio.pause(); alarmAudio.currentTime = 0; }, 2000);
+      const now = new Date().toLocaleTimeString();
+      addLog(`[${now}]  时间到！继续计时中…`, true);
+    }
+    updateDisplay();
+  }
+
+  async function startTimer() {
+    const m = parseInt(inputMin.value) || 0;
+    const s = parseInt(inputSec.value) || 0;
+    totalSeconds = m * 60 + s;
+    if (totalSeconds <= 0) { alert('请设置一个大于 0 的时间！'); return; }
+
+    elapsed    = 0;
+    alarmFired = false;
+    running    = true;
+
+    btnStart.textContent = '停止';
+    inputMin.disabled = inputSec.disabled = true;
+    logEl.innerHTML = '';
+
+    // 调度原生通知（App 在后台时也会弹出）
+    await scheduleNativeAlarm(totalSeconds);
+
+    updateDisplay();
+    intervalId = setInterval(tick, 1000);
+    addLog(`计时开始，设定时间：${fmt(totalSeconds)}`);
+  }
+
+  async function stopTimer() {
+    clearInterval(intervalId);
+    intervalId = null;
+    running    = false;
+    btnStart.textContent = '开始';
+    inputMin.disabled = inputSec.disabled = false;
+    await cancelNativeAlarm();
+    addLog('已手动停止');
+  }
+
+  async function resetTimer() {
+    await stopTimer();
+    elapsed      = 0;
+    alarmFired   = false;
+    totalSeconds = 0;
+    display.textContent = '00:00';
+    display.className   = 'display';
+    overtimeDisplay.textContent = '';
+    statusLabel.textContent = '准备';
+    statusLabel.className   = 'status-label';
+    ringFg.classList.remove('overtime');
+    ringFg.style.stroke = '#4cc9f0';
+    ringFg.style.strokeDashoffset = 0;
+    logEl.innerHTML = '';
+  }
+
+  btnStart.addEventListener('click', () => running ? stopTimer() : startTimer());
+  btnReset.addEventListener('click', resetTimer);
+
+  // 初始化
+  initNotifications();
+  display.textContent = fmt(parseInt(inputSec.value) || 0);
+</script>
+</body>
+</html>

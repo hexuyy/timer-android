@@ -1,0 +1,15 @@
+{
+  "appId": "com.hexuyy.timer",
+  "appName": "计时器",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon_config_sample",
+      "iconColor": "#4cc9f0",
+      "sound": "alarm.wav"
+    }
+  }
+}
